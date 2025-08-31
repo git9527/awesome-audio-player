@@ -1,113 +1,133 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useRef, useState } from "react";
 
-export default function AudioPlayer({ lessonData }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [currentSegment, setCurrentSegment] = useState<any>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+interface Subtitle {
+  id: number;
+  start: number; // 秒
+  end: number;   // 秒
+  text: string;
+}
+
+interface AudioPlayerProps {
+  audioSrc: string;
+  subtitles: Subtitle[];
+}
+
+const formatTime = (time: number): string => {
+  const minutes = Math.floor(time / 60);
+  const seconds = Math.floor(time % 60);
+  return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+};
+
+const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
+  const audioRef = useRef<HTMLAudioElement>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState<number | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const currentLineRef = useRef<HTMLDivElement | null>(null);
 
+  // 更新时间
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const onLoadedMetadata = () => {
-      setDuration(audio.duration);
-    };
+    const updateTime = () => setCurrentTime(audio.currentTime);
+    const updateDuration = () => setDuration(audio.duration);
 
-    const onTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-      setProgress((audio.currentTime / audio.duration) * 100);
-
-      if (currentSegment && audio.currentTime > currentSegment.end) {
-        const nextIndex =
-            lessonData.segments.findIndex((s) => s.id === currentSegment.id) + 1;
-        if (nextIndex < lessonData.segments.length) {
-          playSegment(lessonData.segments[nextIndex]);
-        } else {
-          audio.pause();
-          setIsPlaying(false);
-          setCurrentSegment(null);
-        }
-      }
-    };
-
-    audio.addEventListener('loadedmetadata', onLoadedMetadata);
-    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener("timeupdate", updateTime);
+    audio.addEventListener("loadedmetadata", updateDuration);
 
     return () => {
-      audio.removeEventListener('loadedmetadata', onLoadedMetadata);
-      audio.removeEventListener('timeupdate', onTimeUpdate);
+      audio.removeEventListener("timeupdate", updateTime);
+      audio.removeEventListener("loadedmetadata", updateDuration);
     };
-  }, [currentSegment, lessonData]);
+  }, []);
 
-  const playSegment = (segment: any) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    setCurrentSegment(segment);
-    audio.currentTime = segment.start;
-    audio.play();
-    setIsPlaying(true);
-  };
+  // 匹配当前字幕
+  useEffect(() => {
+    const idx = subtitles.findIndex(
+        (s) => currentTime >= s.start && currentTime <= s.end
+    );
+    setCurrentIndex(idx === -1 ? null : idx);
+  }, [currentTime, subtitles]);
 
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (isPlaying) {
-      audio.pause();
-      setIsPlaying(false);
-    } else {
-      audio.play();
+  // 自动滚动到当前字幕
+  useEffect(() => {
+    if (currentLineRef.current) {
+      currentLineRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [currentIndex]);
+
+  // 点击字幕跳转
+  const handleClick = (start: number) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = start;
+      audioRef.current.play();
       setIsPlaying(true);
     }
   };
 
-  const formatTime = (time: number) => {
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60).toString().padStart(2, '0');
-    return `${minutes}:${seconds}`;
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!audioRef.current) return;
+    const time = Number(e.target.value);
+    audioRef.current.currentTime = time;
+    setCurrentTime(time);
   };
 
   return (
-      <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-2xl">
-        <h1 className="text-xl font-bold mb-2">{lessonData.title}</h1>
-        <audio ref={audioRef} src={lessonData.audioUrl} />
-
-        <div className="w-full bg-gray-200 h-2 rounded mt-4">
-          <div
-              className="bg-blue-500 h-2 rounded"
-              style={{ width: `${progress}%` }}
-          ></div>
+      <div className="p-4 max-w-2xl mx-auto">
+        <audio ref={audioRef} src={audioSrc} preload="metadata" />
+        <div className="flex items-center space-x-4 mb-2">
+          <button
+              onClick={togglePlay}
+              className="px-4 py-2 bg-blue-500 text-white rounded"
+          >
+            {isPlaying ? "暂停" : "播放"}
+          </button>
+          <span>
+          {formatTime(currentTime)} / {formatTime(duration)}
+        </span>
         </div>
+        <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            value={currentTime}
+            step={0.1}
+            onChange={handleProgressChange}
+            className="w-full mb-4"
+        />
 
-        <div className="flex justify-between text-sm text-gray-600 mt-1">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
-
-        <div className="space-y-3 mt-4">
-          {lessonData.segments.map((seg: any) => (
+        {/* 可滚动字幕区域 */}
+        <div className="h-64 overflow-y-auto border p-2 rounded">
+          {subtitles.map((s, i) => (
               <div
-                  key={seg.id}
-                  onClick={() => playSegment(seg)}
-                  className={`p-3 rounded-lg cursor-pointer transition hover:bg-gray-100 ${
-                      currentSegment?.id === seg.id ? 'bg-blue-100' : ''
+                  key={s.id}
+                  ref={i === currentIndex ? currentLineRef : null}
+                  className={`p-2 rounded cursor-pointer ${
+                      i === currentIndex ? "bg-yellow-200" : "hover:bg-gray-100"
                   }`}
+                  onClick={() => handleClick(s.start)}
               >
-                {seg.text}
+                {s.text}
               </div>
           ))}
         </div>
-
-        <div className="mt-6 flex justify-center">
-          <button
-              className="px-4 py-2 bg-blue-500 text-white rounded-full shadow hover:bg-blue-600"
-              onClick={togglePlay}
-          >
-            {isPlaying ? '暂停' : '播放'}
-          </button>
-        </div>
       </div>
   );
-}
+};
+
+export default AudioPlayer;

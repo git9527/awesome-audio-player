@@ -5,12 +5,13 @@ import AudioPlayer from "./components/AudioPlayer.js";
 
 const segments = parseSRT(srtFile);
 
-const lessonData = {
-    title: "Lesson 1 - Dialogue",
-    audioUrl: "/audio/01.mp3",
-    segments,
+const App: React.FC = () => {
+    return (
+        <div className="p-6">
+            <h1 className="text-2xl font-bold mb-4">逐句音频播放器</h1>
+            <AudioPlayer audioSrc="/audio/01.mp3" subtitles={segments} />
+        </div>
+    );
 };
 
-export default function App() {
-    return <AudioPlayer lessonData={lessonData} />;
-}
+export default App;
