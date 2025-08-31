@@ -1,16 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 
-interface Subtitle {
-  id: number;
-  start: number; // 秒
-  end: number;   // 秒
-  text: string;
-}
-
-interface AudioPlayerProps {
-  audioSrc: string;
-  subtitles: Subtitle[];
-}
+import { Subtitle, AudioPlayerProps } from "../types/subtitles";
 
 const formatTime = (time: number): string => {
   const minutes = Math.floor(time / 60);
@@ -113,7 +103,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
 
         {/* 可滚动字幕区域 */}
         <div className="h-64 overflow-y-auto border p-2 rounded">
-          {subtitles.map((s, i) => (
+          {subtitles.map((s: Subtitle, i) => (
               <div
                   key={s.id}
                   ref={i === currentIndex ? currentLineRef : null}
