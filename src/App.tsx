@@ -1,7 +1,7 @@
 import React from "react";
 import srtFile from "./subtitles/01.srt?raw";
 import { parseSRT } from "./utils/srtParser";
-import AudioPlayer from "./components/AudioPlayer";
+import AudioPlayer from "./components/AudioPlayer.js";
 
 const segments = parseSRT(srtFile);
 
@@ -11,12 +11,6 @@ const lessonData = {
     segments,
 };
 
-function App() {
-    return (
-        <div className="p-4">
-            <AudioPlayer lessonData={lessonData} />
-        </div>
-    );
+export default function App() {
+    return <AudioPlayer lessonData={lessonData} />;
 }
-
-export default App;
