@@ -34,7 +34,7 @@ jobs:
 
     - name: Sync using AWS CLI
       run: |
-        aws s3 sync static s3://${{ vars.BITI_BUCKET }} --endpoint-url ${{ vars.BITI_ENDPOINT }} --delete --exclude ".*" --checksum-algorithm CRC32 --size-only
+        aws s3 sync dist s3://${{ vars.BITI_BUCKET }} --endpoint-url ${{ vars.BITI_ENDPOINT }} --delete --exclude ".*" --checksum-algorithm CRC32 --size-only
       env:
         AWS_ACCESS_KEY_ID: ${{ vars.BITI_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ vars.BITI_SECRET_ACCESS_KEY }}
