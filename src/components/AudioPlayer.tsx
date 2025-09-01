@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
+import WaveSurfer from "wavesurfer.js";
 import { Subtitle, AudioPlayerProps } from "../types/subtitles";
-import { Rewind, Play, Pause, FastForward } from "lucide-react"; // 图标库
+import { Rewind, Play, Pause, FastForward } from "lucide-react";
 
 const formatTime = (time: number) => {
   const minutes = Math.floor(time / 60);
@@ -9,14 +10,55 @@ const formatTime = (time: number) => {
 };
 
 const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const wavesurferRef = useRef<WaveSurfer | null>(null);
+  const waveformRef = useRef<HTMLDivElement | null>(null);
   const [currentSegment, setCurrentSegment] = useState<Subtitle | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0); // 百分比
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
   const subtitleRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // 初始化 WaveSurfer
+  useEffect(() => {
+    if (!waveformRef.current) return;
+
+    const ws = WaveSurfer.create({
+      container: waveformRef.current,
+      waveColor: "#ccc",
+      progressColor: "#3b82f6", // 蓝色进度条
+      cursorColor: "#111",
+      height: 80,
+      interact: true,
+    });
+
+    ws.load(audioSrc);
+
+    // 音频加载完成
+    ws.on("ready", () => {
+      setDuration(ws.getDuration());
+    });
+
+    // 播放进度更新
+    ws.on("audioprocess", (t) => {
+      setCurrentTime(t);
+
+      const seg = subtitles.find((s) => t >= s.start && t < s.end);
+      if (seg && seg.id !== currentSegment?.id) {
+        setCurrentSegment(seg);
+      }
+    });
+
+    ws.on("finish", () => {
+      setIsPlaying(false);
+    });
+
+    wavesurferRef.current = ws;
+
+    return () => {
+      ws.destroy();
+    };
+  }, [audioSrc, subtitles]);
 
   // 自动滚动字幕
   useEffect(() => {
@@ -27,103 +69,46 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }
-  }, [currentSegment, subtitles]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    const onLoadedMetadata = () => setDuration(audio.duration);
-
-    // 时间更新时，根据 currentTime 自动匹配字幕
-    const onTimeUpdate = () => {
-      if (!audioRef.current) return;
-      const t = audioRef.current.currentTime;
-      setCurrentTime(t);
-      setProgress((t / duration) * 100);
-
-      // 找到当前时间对应的字幕
-      const seg = subtitles.find((s) => t >= s.start && t < s.end);
-      if (seg && seg.id !== currentSegment?.id) {
-        setCurrentSegment(seg);
-      }
-    };
-
-    audio.addEventListener("loadedmetadata", onLoadedMetadata);
-    audio.addEventListener("timeupdate", onTimeUpdate);
-
-    return () => {
-      audio.removeEventListener("loadedmetadata", onLoadedMetadata);
-      audio.removeEventListener("timeupdate", onTimeUpdate);
-    };
-  }, [currentSegment, subtitles]);
+  }, [currentSegment]);
 
   const playSegment = (segment: Subtitle) => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    if (!wavesurferRef.current) return;
     setCurrentSegment(segment);
-    audio.currentTime = segment.start;
-    audio.play();
+    wavesurferRef.current.seekTo(segment.start / duration);
+    wavesurferRef.current.play();
     setIsPlaying(true);
   };
 
-  // 点击播放/暂停按钮
+  // 播放/暂停
   const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
+    if (!wavesurferRef.current) return;
     if (isPlaying) {
-      audio.pause();
+      wavesurferRef.current.pause();
       setIsPlaying(false);
     } else {
-      // 如果没有当前字幕，就从第一个字幕开始
-      if (!currentSegment && subtitles.length > 0) {
-        playSegment(subtitles[0]);
-      } else {
-        audio.play();
-      }
+      wavesurferRef.current.play();
       setIsPlaying(true);
     }
   };
 
-  // 拖动进度条
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const newTime = (parseFloat(e.target.value) / 100) * duration;
-    audio.currentTime = newTime;
-    setCurrentTime(newTime);
-    setProgress(parseFloat(e.target.value));
-  };
-
   // 前进 / 后退 15 秒
   const skipTime = (seconds: number) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    let newTime = audio.currentTime + seconds;
-    if (newTime < 0) newTime = 0;
-    if (newTime > duration) newTime = duration;
-    audio.currentTime = newTime;
-    setCurrentTime(newTime);
+    if (!wavesurferRef.current) return;
+    const newTime = wavesurferRef.current.getCurrentTime() + seconds;
+    wavesurferRef.current.setTime(
+        Math.min(Math.max(newTime, 0), duration)
+    );
   };
 
   return (
       <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-2xl">
-        <audio ref={audioRef} src={audioSrc} />
+        {/* 波形图 */}
+        <div ref={waveformRef} className="w-full"></div>
 
-        {/* 时间 + 进度条 */}
-        <div className="flex items-center gap-3 mt-4">
-          <span className="text-sm text-gray-600">{formatTime(currentTime)}</span>
-          <input
-              type="range"
-              className="flex-1"
-              value={progress}
-              min="0"
-              max="100"
-              step="0.1"
-              onChange={handleSeek}
-          />
-          <span className="text-sm text-gray-600">{formatTime(duration)}</span>
+        {/* 时间信息 */}
+        <div className="flex justify-between text-sm text-gray-600 mt-2">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
         </div>
 
         {/* 字幕滚动区 */}
@@ -145,13 +130,13 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
           ))}
         </div>
 
-        {/* 播放控制区 */}
+        {/* 控制按钮 */}
         <div className="mt-6 flex justify-center items-center gap-6">
           <button
               className="p-3 rounded-full bg-gray-200 hover:bg-gray-300"
               onClick={() => skipTime(-15)}
           >
-            <Rewind size={24} /> {/* 后退 15 秒 */}
+            <Rewind size={24} />
           </button>
 
           <button
@@ -165,7 +150,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
               className="p-3 rounded-full bg-gray-200 hover:bg-gray-300"
               onClick={() => skipTime(15)}
           >
-            <FastForward size={24} /> {/* 前进 15 秒 */}
+            <FastForward size={24} />
           </button>
         </div>
       </div>

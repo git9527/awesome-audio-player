@@ -3,7 +3,7 @@ name: Build and Deploy to S3
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   build-and-deploy:
@@ -34,8 +34,8 @@ jobs:
 
     - name: Sync using AWS CLI
       run: |
-        aws s3 sync static s3://${{ vars.R2_BUCKET }}/static --endpoint-url ${{ vars.R2_ENDPOINT }} --delete --exclude ".*" --checksum-algorithm CRC32 --size-only
+        aws s3 sync static s3://${{ vars.BITI_BUCKET }} --endpoint-url ${{ vars.BITI_ENDPOINT }} --delete --exclude ".*" --checksum-algorithm CRC32 --size-only
       env:
-        AWS_ACCESS_KEY_ID: ${{ vars.R2_ACCESS_KEY_ID }}
-        AWS_SECRET_ACCESS_KEY: ${{ vars.R2_SECRET_ACCESS_KEY }}
-        AWS_REGION: ${{ vars.R2_REGION }}
+        AWS_ACCESS_KEY_ID: ${{ vars.BITI_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ vars.BITI_SECRET_ACCESS_KEY }}
+        AWS_REGION: ${{ vars.BITI_REGION }}
