@@ -13,7 +13,9 @@ const FileNavigator: React.FC<FileNavigatorProps> = ({
                                                          onNavigate,
                                                          onSelectFile,
                                                      }) => {
-    const items = mockFileSystem[currentPath] || [];
+
+    const decodedPath = decodeURIComponent(currentPath)
+    const items = mockFileSystem[decodedPath] || [];
 
     // 拆分路径生成面包屑
     const parts = currentPath.split("/").filter(Boolean);

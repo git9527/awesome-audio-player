@@ -24,6 +24,12 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
     wavesurfer.load(audioSrc);
     wavesurferRef.current = wavesurfer;
 
+    // 监听加载完成 → 自动播放
+    wavesurfer.on("ready", () => {
+        wavesurfer.play();
+        setIsPlaying(true);
+    });
+
     // 监听播放进度 → 更新字幕
     wavesurfer.on("audioprocess", (time: number) => {
       const seg = subtitles.find((s) => time >= s.start && time <= s.end);
