@@ -1,24 +1,54 @@
-import React, { useEffect, useState } from "react";
-import { Subtitle } from "./types/subtitles";
+import React, { useState } from "react";
 
+import FileNavigator from "./components/FileNavigator";
+import AudioPlayer from "./components/AudioPlayer";
+import { FileSystemItem, SubtitleSegment } from "./types";
 import { parseSRT } from "./utils/srtParser";
-import AudioPlayer from "./components/AudioPlayer.js";
 
 const App: React.FC = () => {
-    const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
+    const [currentPath, setCurrentPath] = useState("/"); // 默认在根目录
+    const [audioUrl, setAudioUrl] = useState<string | null>(null);
+    const [subtitles, setSubtitles] = useState<SubtitleSegment[]>([]);
 
-    useEffect(() => {
-        fetch("/subtitles/01.srt") // 🔹 确保文件放在 public/subtitles/lesson1.srt
+    // 选择音频文件
+    const handleSelectFile = (file: FileSystemItem) => {
+
+        const audioUrl = "https://biti.cdn.zhangsn.me/audio/grade-6" + decodeURIComponent(file.path);
+        setAudioUrl(audioUrl);
+
+        // 推断对应的 srt 文件路径
+        const subtitleUrl = audioUrl.replace(/\.[^.]+$/, ".srt");
+        fetch(subtitleUrl)
             .then((res) => res.text())
-            .then((text) => {
-                setSubtitles(parseSRT(text));
-            });
-    }, []);
+            .then((text) => setSubtitles(parseSRT(text)))
+            .catch(() => setSubtitles([]));
+    };
 
     return (
-        <div className="p-6">
-            <h1 className="text-2xl font-bold mb-4">逐句音频播放器</h1>
-            <AudioPlayer audioSrc="/audio/01.mp3" subtitles={subtitles} />
+        <div className="flex flex-col h-screen">
+            {/* 顶部：文件导航 */}
+            <div className="h-1/3 border-b overflow-y-auto">
+                <FileNavigator
+                    currentPath={currentPath}
+                    onNavigate={setCurrentPath}
+                    onSelectFile={handleSelectFile}
+                />
+            </div>
+
+            {/* 底部：播放器 + 字幕 */}
+            <div className="flex-1 flex flex-col">
+                {audioUrl ? (
+                    <>
+                        <div className="border-b">
+                            <AudioPlayer audioSrc={audioUrl} subtitles={subtitles} />
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex-1 flex items-center justify-center text-gray-500">
+                        请选择一个音频文件
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
