@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Subtitle, AudioPlayerProps } from "../types/subtitles";
+import { Rewind, Play, Pause, FastForward } from "lucide-react"; // 图标库
 
 const formatTime = (time: number) => {
   const minutes = Math.floor(time / 60);
@@ -11,13 +12,13 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [currentSegment, setCurrentSegment] = useState<Subtitle | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
+  const [progress, setProgress] = useState(0); // 百分比
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
 
-  // 存 refs，方便逐句滚动
   const subtitleRefs = useRef<(HTMLDivElement | null)[]>([]);
 
+  // 自动滚动字幕
   useEffect(() => {
     if (currentSegment) {
       const index = subtitles.findIndex((s) => s.id === currentSegment.id);
@@ -80,25 +81,47 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
     }
   };
 
+  // 拖动进度条
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const newTime = (parseFloat(e.target.value) / 100) * duration;
+    audio.currentTime = newTime;
+    setCurrentTime(newTime);
+    setProgress(parseFloat(e.target.value));
+  };
+
+  // 前进 / 后退 15 秒
+  const skipTime = (seconds: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    let newTime = audio.currentTime + seconds;
+    if (newTime < 0) newTime = 0;
+    if (newTime > duration) newTime = duration;
+    audio.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
+
   return (
       <div className="max-w-lg mx-auto p-6 bg-white shadow-lg rounded-2xl">
         <audio ref={audioRef} src={audioSrc} />
 
-        {/* 进度条 */}
-        <div className="w-full bg-gray-200 h-2 rounded mt-4">
-          <div
-              className="bg-blue-500 h-2 rounded"
-              style={{ width: `${progress}%` }}
+        {/* 时间 + 进度条 */}
+        <div className="flex items-center gap-3 mt-4">
+          <span className="text-sm text-gray-600">{formatTime(currentTime)}</span>
+          <input
+              type="range"
+              className="flex-1"
+              value={progress}
+              min="0"
+              max="100"
+              step="0.1"
+              onChange={handleSeek}
           />
+          <span className="text-sm text-gray-600">{formatTime(duration)}</span>
         </div>
 
-        {/* 时间 */}
-        <div className="flex justify-between text-sm text-gray-600 mt-1">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
-
-        {/* 可滚动字幕区 */}
+        {/* 字幕滚动区 */}
         <div className="space-y-3 mt-4 max-h-64 overflow-y-auto border rounded-lg p-2">
           {subtitles.map((seg, i) => (
               <div
@@ -117,13 +140,27 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
           ))}
         </div>
 
-        {/* 播放控制 */}
-        <div className="mt-6 flex justify-center">
+        {/* 播放控制区 */}
+        <div className="mt-6 flex justify-center items-center gap-6">
           <button
-              className="px-4 py-2 bg-blue-500 text-white rounded-full shadow hover:bg-blue-600"
+              className="p-3 rounded-full bg-gray-200 hover:bg-gray-300"
+              onClick={() => skipTime(-15)}
+          >
+            <Rewind size={24} /> {/* 后退 15 秒 */}
+          </button>
+
+          <button
+              className="p-4 bg-blue-500 text-white rounded-full shadow hover:bg-blue-600"
               onClick={togglePlay}
           >
-            {isPlaying ? "暂停" : "播放"}
+            {isPlaying ? <Pause size={28} /> : <Play size={28} />}
+          </button>
+
+          <button
+              className="p-3 rounded-full bg-gray-200 hover:bg-gray-300"
+              onClick={() => skipTime(15)}
+          >
+            <FastForward size={24} /> {/* 前进 15 秒 */}
           </button>
         </div>
       </div>
