@@ -35,19 +35,17 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
 
     const onLoadedMetadata = () => setDuration(audio.duration);
 
+    // 时间更新时，根据 currentTime 自动匹配字幕
     const onTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-      setProgress((audio.currentTime / audio.duration) * 100);
+      if (!audioRef.current) return;
+      const t = audioRef.current.currentTime;
+      setCurrentTime(t);
+      setProgress((t / duration) * 100);
 
-      if (currentSegment && audio.currentTime > currentSegment.end) {
-        const nextIndex = subtitles.findIndex((s) => s.id === currentSegment.id) + 1;
-        if (nextIndex < subtitles.length) {
-          playSegment(subtitles[nextIndex]);
-        } else {
-          audio.pause();
-          setIsPlaying(false);
-          setCurrentSegment(null);
-        }
+      // 找到当前时间对应的字幕
+      const seg = subtitles.find((s) => t >= s.start && t < s.end);
+      if (seg && seg.id !== currentSegment?.id) {
+        setCurrentSegment(seg);
       }
     };
 
@@ -69,14 +67,21 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
     setIsPlaying(true);
   };
 
+  // 点击播放/暂停按钮
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
+
     if (isPlaying) {
       audio.pause();
       setIsPlaying(false);
     } else {
-      audio.play();
+      // 如果没有当前字幕，就从第一个字幕开始
+      if (!currentSegment && subtitles.length > 0) {
+        playSegment(subtitles[0]);
+      } else {
+        audio.play();
+      }
       setIsPlaying(true);
     }
   };
