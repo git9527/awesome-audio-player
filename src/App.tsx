@@ -27,7 +27,7 @@ const App: React.FC = () => {
     return (
         <div className="flex flex-col h-screen">
             {/* 顶部：文件导航 */}
-            <div className="h-1/3 border-b overflow-y-auto">
+            <div className="h-2/5 border-b overflow-y-auto">
                 <FileNavigator
                     currentPath={currentPath}
                     onNavigate={setCurrentPath}
