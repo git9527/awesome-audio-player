@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "module": "esnext",
     "target": "es2017",   // 或 "es2018", "es2020", "esnext"
     "lib": ["es2017", "dom"],
     "jsx": "react"
