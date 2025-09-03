@@ -36,6 +36,7 @@ jobs:
       run: |
         aws s3 sync dist s3://${{ vars.BITI_BUCKET }} --endpoint-url ${{ vars.BITI_ENDPOINT }} --delete --exclude ".*" --checksum-algorithm CRC32 --size-only
         aws s3 cp dist/index.html s3://${{ vars.BITI_BUCKET }}/index.html --endpoint-url ${{ vars.BITI_ENDPOINT }} --metadata-directive REPLACE --cache-control "no-cache, no-store, must-revalidate"
+        curl -X POST -H "Authorization: ${{vars.BITI_API_TOKEN}}" "https://api.bitiful.com/cdn/cache/refresh" -d '{"type": "url", "url_list": ["${{vars.BITI_CDN_URL}}/index.html"]}' -H "Content-Type: application/json"
       env:
         AWS_ACCESS_KEY_ID: ${{ vars.BITI_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ vars.BITI_SECRET_ACCESS_KEY }}
