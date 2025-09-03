@@ -4,11 +4,20 @@ import { AudioPlayerProps, SubtitleSegment } from "../types";
 import SubtitleScroll from "./SubtitleScroll";
 import { Play, Pause, Rewind, FastForward } from "lucide-react";
 
+const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60).toString().padStart(2, "0");
+    return `${minutes}:${seconds}`;
+};
+
 const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
     const waveformRef = useRef<HTMLDivElement | null>(null);
     const wavesurferRef = useRef<WaveSurfer | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [currentSegment, setCurrentSegment] = useState<SubtitleSegment | null>(null);
+
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
 
     useEffect(() => {
         if (!waveformRef.current) return;
@@ -27,12 +36,15 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
 
         // 自动播放
         wavesurfer.on("ready", () => {
+            setDuration(wavesurfer.getDuration());
             wavesurfer.play();
             setIsPlaying(true);
         });
 
         // 监听播放进度 → 更新字幕
         wavesurfer.on("audioprocess", (time: number) => {
+            setCurrentTime(time);
+
             const seg = subtitles.find((s) => time >= s.start && time <= s.end);
             if (seg && seg.id !== currentSegment?.id) {
                 setCurrentSegment(seg);
@@ -74,6 +86,12 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
         <div className="border rounded-lg shadow p-4">
             {/* 波形图 */}
             <div ref={waveformRef} className="w-full mb-4" />
+
+            {/* 播放时长 */}
+            <div className="flex justify-between text-sm text-gray-600 mb-4">
+                <span>{formatTime(currentTime)}</span>
+                <span>-{formatTime(Math.max(0, duration - currentTime))}</span>
+            </div>
 
             {/* 控制按钮 */}
             <div className="flex items-center justify-center space-x-6 mb-4">
