@@ -62,14 +62,18 @@ export async function generateSRT(audioFilePath: string, engineModelType: string
    * [0:48.000,0:50.200]  Do this eight times.
    */
 
+
+
+
     const lines = textResult.split('\n');
     let srt = '';
     let index = 1;
     for (const line of lines) {
         const match = line.match(/\[(\d+):(\d+\.\d+),(\d+):(\d+\.\d+)\]\s+(.*)/);
         if (match) {
-            const startTime = "00:" + match[1] + ':' + match[2];
-            const endTime = "00:" + match[3] + ':' + match[4];
+            // convert 0:4.980,0:7.640 to 00:00:04,980 --> 00:00:07,640
+            const startTime = `00:${String(match[1]).padStart(2, '0')}:${String(Math.floor(parseFloat(match[2]))).padStart(2, '0')},${String(Math.floor((parseFloat(match[2]) % 1) * 1000)).padStart(3, '0')}`;
+            const endTime = `00:${String(match[3]).padStart(2, '0')}:${String(Math.floor(parseFloat(match[4]))).padStart(2, '0')},${String(Math.floor((parseFloat(match[4]) % 1) * 1000)).padStart(3, '0')}`;
             const text = match[5].trim();
 
             srt += `${index}\n`;

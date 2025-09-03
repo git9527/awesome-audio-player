@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
 import { AudioPlayerProps, SubtitleSegment } from "../types";
 import SubtitleScroll from "./SubtitleScroll";
-import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
+import { Play, Pause, Rewind, FastForward } from "lucide-react";
 
 const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
     const waveformRef = useRef<HTMLDivElement | null>(null);
@@ -82,7 +82,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
                     className="p-2 rounded-full hover:bg-gray-200"
                     title="后退15秒"
                 >
-                    <SkipBack size={28} />
+                    <Rewind size={28} />
                 </button>
 
                 <button
@@ -103,7 +103,7 @@ const AudioPlayer: React.FC<AudioPlayerProps> = ({ audioSrc, subtitles }) => {
                     className="p-2 rounded-full hover:bg-gray-200"
                     title="前进15秒"
                 >
-                    <SkipForward size={28} />
+                    <FastForward size={28} />
                 </button>
             </div>
 
